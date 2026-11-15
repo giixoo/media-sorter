@@ -1,0 +1,19 @@
+# MEDIA=/path/to/folder docker compose up      (Windows: set MEDIA=D:\Videos\Trip)
+services:
+  media-sorter:
+    image: ghcr.io/giixoo/media-sorter:latest
+    build: .
+    ports:
+      - "127.0.0.1:8765:8765"
+    volumes:
+      - "${MEDIA:-./test-media}:/media"
+    environment:
+      TZ: "Europe/Warsaw"        # used to convert UTC video timestamps to local time
+      # TITLE: "My trip"
+      # PROXY_WORKERS: "2"
+      # PROXY_ENCODER: "h264_nvenc"   # with the GPU block below
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices: [{driver: nvidia, count: 1, capabilities: [gpu, video]}]
+    restart: unless-stopped

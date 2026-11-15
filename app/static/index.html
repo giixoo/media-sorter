@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>media-sorter</title>
+<style>
+:root{--bg:#15171a;--panel:#1d2024;--panel2:#25292e;--line:#33383f;--text:#e8e6e1;--mute:#9aa0a6;--acc:#ffc21a;--good:#4caf7a;--bad:#e5534b}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.4 "Segoe UI",system-ui,sans-serif}
+header{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+header h1{font-size:17px;margin:0;font-weight:700;white-space:nowrap}
+header h1 span{color:var(--acc)}
+.tabs button{background:none;border:1px solid var(--line);color:var(--text);padding:6px 14px;border-radius:6px;cursor:pointer;margin-right:4px}
+.tabs button.on{background:var(--acc);color:#111;border-color:var(--acc);font-weight:600}
+select,.hbtn{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:5px 8px;border-radius:6px;font:inherit;font-size:13px;cursor:pointer}
+.hbtn:hover{border-color:var(--acc)}
+.stats{margin-left:auto;color:var(--mute);font-size:13px}
+.stats b{color:var(--text)}
+#job{font-size:12px;color:var(--acc)}
+#save{font-size:12px;color:var(--mute);min-width:70px;text-align:right}
+main{height:calc(100% - 53px)}
+.view{display:none;height:100%}
+.view.on{display:flex}
+.empty{padding:40px;color:var(--mute);font-size:15px}
+/* video tab */
+#list{width:330px;flex:none;overflow:auto;border-right:1px solid var(--line);background:var(--panel)}
+.dayh{position:sticky;top:0;background:var(--panel2);padding:7px 12px;font-weight:700;font-size:13px;border-bottom:1px solid var(--line);z-index:1}
+.dayh small{color:var(--mute);font-weight:400}
+.item{display:flex;gap:10px;padding:7px 10px;border-bottom:1px solid #262a2f;cursor:pointer;align-items:center}
+.item:hover{background:#23272c}
+.item.on{background:#2d2a1c;outline:1px solid var(--acc)}
+.item img{width:112px;height:63px;object-fit:cover;border-radius:4px;background:#000;flex:none}
+.item .meta{min-width:0}
+.item .t{font-weight:600}
+.item .p{color:var(--mute);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{display:inline-block;background:var(--acc);color:#111;border-radius:10px;padding:0 7px;font-size:11px;font-weight:700;margin-top:2px}
+.tag{display:inline-block;border:1px solid var(--line);color:var(--mute);border-radius:4px;padding:0 4px;font-size:10px;margin-left:4px}
+#stage{flex:1;overflow:auto;padding:16px 20px;min-width:0}
+.vbox{position:relative}
+video{width:100%;max-height:58vh;background:#000;border-radius:6px;display:block}
+#vwait{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:var(--mute);font-size:15px;background:rgba(0,0,0,.6);border-radius:6px;text-align:center;padding:20px}
+#vtitle{color:var(--mute);font-size:12px;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#bar{position:relative;height:34px;background:var(--panel2);border-radius:5px;margin:10px 0 6px;cursor:pointer;overflow:hidden}
+#bar .rg{position:absolute;top:0;bottom:0;background:rgba(255,194,26,.55);border-left:2px solid var(--acc);border-right:2px solid var(--acc)}
+#bar .pend{position:absolute;top:0;bottom:0;width:2px;background:var(--good)}
+#bar .tick{position:absolute;top:0;bottom:0;width:1px;background:#444}
+#bar .tick span{position:absolute;top:2px;left:3px;font-size:10px;color:var(--mute)}
+#bar .head{position:absolute;top:0;bottom:0;width:2px;background:#fff;pointer-events:none}
+.ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px}
+.ctl button{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:6px 11px;border-radius:6px;cursor:pointer}
+.ctl button:hover{border-color:var(--acc)}
+.ctl button.pri{background:var(--acc);color:#111;border-color:var(--acc);font-weight:600}
+.ctl .time{font-variant-numeric:tabular-nums;color:var(--mute);margin-left:6px}
+kbd{background:#000;color:#ddd;border:1px solid #444;border-radius:3px;padding:0 4px;font-size:11px;font-weight:400}
+table{width:100%;border-collapse:collapse}
+td,th{padding:6px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{color:var(--mute);font-weight:500;font-size:12px}
+td input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:4px;padding:4px 6px}
+.stars span{cursor:pointer;font-size:18px;color:#555;user-select:none}
+.stars span.on{color:var(--acc)}
+.mini{background:none;border:1px solid var(--line);color:var(--text);border-radius:4px;cursor:pointer;padding:2px 7px;font-size:12px}
+.mini:hover{border-color:var(--acc)}
+.mini.del:hover{border-color:var(--bad);color:var(--bad)}
+.help{color:var(--mute);font-size:12px;margin-top:14px}
+/* photos tab */
+#photos{overflow:auto;padding:0 16px 30px}
+#photos.on{display:block}
+#photos h3{margin:18px 0 8px;font-size:15px}
+#photos h3 small{color:var(--mute);font-weight:400}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.ph{background:var(--panel);border-radius:6px;overflow:hidden;border:2px solid transparent;position:relative}
+.ph.sel{border-color:var(--acc)}
+.ph img{width:100%;height:130px;object-fit:cover;display:block;cursor:pointer;opacity:.55;background:#000}
+.ph.sel img{opacity:1}
+.ph .row{display:flex;align-items:center;justify-content:space-between;padding:3px 6px;font-size:12px;color:var(--mute);gap:4px}
+.ph .row>span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph .zoom{position:absolute;top:5px;right:5px;background:rgba(0,0,0,.6);border:none;color:#fff;border-radius:4px;cursor:pointer;padding:2px 6px}
+.ph .ed{position:absolute;top:5px;left:5px;background:var(--acc);color:#111;border-radius:4px;font-size:10px;font-weight:700;padding:1px 5px}
+.toolbar{position:sticky;top:0;z-index:2;background:var(--bg);padding:10px 0 6px;display:flex;gap:14px;align-items:center;color:var(--mute);font-size:12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+/* viewer / editor */
+#vw{position:fixed;inset:0;background:#0b0c0e;display:none;z-index:20}
+#vw.on{display:flex}
+#vwImg{flex:1;position:relative;display:flex;align-items:center;justify-content:center;min-width:0;user-select:none}
+#vwImg .wrap{position:relative;line-height:0}
+#vwImg img{max-width:calc(100vw - 340px);max-height:calc(100vh - 20px);display:block}
+#cropBox{position:absolute;border:2px solid var(--acc);box-shadow:0 0 0 9999px rgba(0,0,0,.55);cursor:move;display:none}
+#cropBox i{position:absolute;width:14px;height:14px;background:var(--acc);border-radius:2px}
+#cropBox i.nw{left:-8px;top:-8px;cursor:nwse-resize}#cropBox i.ne{right:-8px;top:-8px;cursor:nesw-resize}
+#cropBox i.sw{left:-8px;bottom:-8px;cursor:nesw-resize}#cropBox i.se{right:-8px;bottom:-8px;cursor:nwse-resize}
+#cropBox .g{position:absolute;inset:0;background:linear-gradient(to right,transparent 33%,rgba(255,255,255,.25) 33.3%,transparent 33.6%,transparent 66.3%,rgba(255,255,255,.25) 66.6%,transparent 67%),linear-gradient(to bottom,transparent 33%,rgba(255,255,255,.25) 33.3%,transparent 33.6%,transparent 66.3%,rgba(255,255,255,.25) 66.6%,transparent 67%);pointer-events:none}
+#vwSide{width:320px;flex:none;background:var(--panel);border-left:1px solid var(--line);padding:14px 16px;overflow:auto}
+#vwSide h4{margin:16px 0 6px;font-size:13px;color:var(--acc);text-transform:uppercase;letter-spacing:.06em}
+#vwSide .info{color:var(--mute);font-size:12px;word-break:break-all}
+#vwSide a{color:var(--acc)}
+.sl{display:grid;grid-template-columns:86px 1fr 40px;gap:6px;align-items:center;margin:5px 0;font-size:12px}
+.sl input{width:100%;accent-color:var(--acc)}
+.sl output{text-align:right;color:var(--mute);font-variant-numeric:tabular-nums}
+.btns{display:flex;flex-wrap:wrap;gap:5px}
+.btns button,.navb{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:5px 9px;border-radius:5px;cursor:pointer;font-size:12px}
+.btns button.on{background:var(--acc);color:#111;border-color:var(--acc)}
+.btns button:hover,.navb:hover{border-color:var(--acc)}
+.bigsel{width:100%;padding:9px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-weight:700;cursor:pointer;margin-top:8px}
+.bigsel.on{background:var(--acc);color:#111;border-color:var(--acc)}
+.navb{position:absolute;top:50%;transform:translateY(-50%);font-size:22px;padding:10px 14px;background:rgba(0,0,0,.5)}
+#vwPrev{left:10px}#vwNext{right:10px}
+#vwBusy{position:absolute;top:12px;left:14px;color:var(--mute);font-size:12px}
+.filter{color:var(--mute);font-size:12px;padding:8px 12px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+@media (max-width:800px){.view.on{flex-direction:column}#list{width:100%;height:35vh}#vw.on{flex-direction:column}#vwImg img{max-width:100vw;max-height:60vh}#vwSide{width:100%}}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">media-sorter</h1>
+  <div class="tabs"><button id="tV" class="on">Video</button><button id="tP">Photos</button></div>
+  <select id="srcSel" title="Show one folder only"></select>
+  <button class="hbtn" id="rescan" title="Look for new / changed files">⟳ Rescan</button>
+  <span id="job"></span>
+  <div class="stats" id="stats"></div>
+  <div id="save">saved</div>
+</header>
+<main>
+  <section class="view on" id="video">
+    <div id="list"></div>
+    <div id="stage">
+      <div id="vtitle"></div>
+      <div class="vbox"><video id="vid" controls preload="metadata"></video><div id="vwait"></div></div>
+      <div id="bar"></div>
+      <div class="ctl">
+        <button id="bIn" class="pri">Mark IN <kbd>I</kbd></button>
+        <button id="bOut" class="pri">Mark OUT <kbd>O</kbd></button>
+        <button id="bBack">−5 s <kbd>J</kbd></button>
+        <button id="bFwd">+5 s <kbd>L</kbd></button>
+        <button id="bSpd">Speed 1×</button>
+        <button id="bPrev">◀ Prev clip <kbd>P</kbd></button>
+        <button id="bNext">Next clip ▶ <kbd>N</kbd></button>
+        <span class="time" id="tm"></span>
+      </div>
+      <table>
+        <thead><tr><th>Piece</th><th></th><th>Stars</th><th>Original sound</th><th>Caption (optional)</th><th></th></tr></thead>
+        <tbody id="ranges"></tbody>
+      </table>
+      <div class="help">Play the clip, press <kbd>I</kbd> where a good moment starts and <kbd>O</kbd> where it ends.
+        Stars: ★★★★★ = must have, ★ = only if there is room. “Original sound” = keep the camera audio (talk, crowd, engines).
+        <kbd>Space</kbd> play/pause · <kbd>←</kbd>/<kbd>→</kbd> ±1 s · click the bar to jump. Everything saves automatically.</div>
+    </div>
+  </section>
+  <section class="view" id="photos"></section>
+</main>
+<div id="vw">
+  <div id="vwImg">
+    <span id="vwBusy"></span>
+    <div class="wrap"><img id="vwPic" alt=""><div id="cropBox"><div class="g"></div><i class="nw"></i><i class="ne"></i><i class="sw"></i><i class="se"></i></div></div>
+    <button class="navb" id="vwPrev" title="Previous (←)">‹</button><button class="navb" id="vwNext" title="Next (→)">›</button>
+  </div>
+  <div id="vwSide">
+    <button class="navb" id="vwClose" style="position:static;float:right;transform:none" title="Close (Esc)">✕</button>
+    <div class="info" id="vwInfo"></div>
+    <button class="bigsel" id="vwSel">Select (S)</button>
+    <div id="vwStars" style="margin-top:6px"></div>
+    <h4>Light &amp; colour</h4>
+    <div class="btns"><button id="aAuto" title="Automatic fix (A)">✨ Auto fix</button><button id="aReset">Reset</button><button id="aBefore" title="Hold to see the original (B)">Hold: before</button></div>
+    <div id="sliders"></div>
+    <h4>Crop</h4>
+    <div class="btns" id="cropAsp"></div>
+    <div class="btns" style="margin-top:6px"><button id="cOn">✂ Crop (C)</button><button id="cClear">Remove crop</button></div>
+    <div class="info" style="margin-top:6px">Drag on the photo to draw, drag inside to move, corners to resize.</div>
+    <h4>Keys</h4>
+    <div class="info"><kbd>←</kbd>/<kbd>→</kbd> previous / next · <kbd>S</kbd> select · <kbd>1</kbd>–<kbd>5</kbd> stars · <kbd>A</kbd> auto fix · <kbd>C</kbd> crop · hold <kbd>B</kbd> before · <kbd>Esc</kbd> close</div>
+  </div>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let D, SEL, cur = null, pendIn = null, saveT = null, onlySel = false, photoOnlySel = false, SRC = '', GEN = -1;
+const fmt = t => { t = Math.max(0, t || 0); const m = Math.floor(t/60), s = (t%60); return m + ':' + s.toFixed(1).padStart(4,'0'); };
+const dayLabel = d => { const x = new Date(d + 'T12:00:00'); return isNaN(x) ? d : x.toLocaleDateString(undefined, {weekday:'short', day:'numeric', month:'short', year:'numeric'}); };
+const vid = $('#vid');
+const inSrc = x => !SRC || x.src === SRC;
+const folderName = f => f === '.' ? '(top folder)' : f;
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+const noImg = `onerror="this.style.visibility='hidden'"`;
+const videos = () => D.videos.filter(inSrc);
+const photos = () => D.photos.filter(inSrc);
+
+function load() {
+  return fetch('/api/data').then(r => r.json()).then(d => {
+    const first = !D;
+    D = d; GEN = d.status.generation;
+    if (first) {
+      SEL = d.sel || {};
+      SEL.clips = SEL.clips || {}; SEL.photos = SEL.photos || {}; SEL.edits = SEL.edits || {};
+    }
+    document.title = d.title + ' · media-sorter';
+    $('#title').innerHTML = `${esc(d.title)} <span>· sorter</span>`;
+    buildSources(); buildList(); buildPhotos(); stats(); showJob(d.status);
+    if (cur) cur = D.videos.find(c => c.id === cur.id) || null;
+    if (!cur) { const v = videos(); const f = v.find(c => (SEL.clips[c.path]||[]).length) || v[0]; if (f) openClip(f.id); }
+  });
+}
+load();
+
+function buildSources() {
+  const S = $('#srcSel'), cnt = {};
+  for (const x of D.videos.concat(D.photos)) cnt[x.src] = (cnt[x.src] || 0) + 1;
+  const names = Object.keys(cnt).sort();
+  S.innerHTML = `<option value="">All folders (${D.videos.length + D.photos.length})</option>` +
+    names.map(n => `<option value="${esc(n)}" ${n === SRC ? 'selected' : ''}>${n === '.' ? '(top folder)' : esc(n)} (${cnt[n]})</option>`).join('');
+  S.style.display = names.length > 1 ? '' : 'none';
+}
+$('#srcSel').onchange = e => { SRC = e.target.value; buildList(); buildPhotos(); stats(); if (!cur || !inSrc(cur)) { const v = videos(); if (v[0]) openClip(v[0].id); } };
+$('#rescan').onclick = () => fetch('/api/rescan', {method:'POST'}).then(poll);
+
+function showJob(s) {
+  const pv = s.previews || {}, busy = (pv.queued || 0) + (pv.running || 0);
+  let t = '';
+  if (s.scanning) t = `indexing ${s.done}/${s.total || '…'}`;
+  else if (busy) t = `making video previews: ${busy} left`;
+  if (pv.error) t += (t ? ' · ' : '') + `${pv.error} preview error${pv.error > 1 ? 's' : ''}`;
+  $('#job').textContent = t;
+}
+function poll() {
+  fetch('/api/status').then(r => r.json()).then(s => { showJob(s); if (s.generation !== GEN && !s.scanning) load(); }).catch(() => {});
+}
+setInterval(poll, 3000);
+
+function save() {
+  $('#save').textContent = 'saving…';
+  clearTimeout(saveT);
+  saveT = setTimeout(() => fetch('/api/save', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(SEL)})
+    .then(r => $('#save').textContent = r.ok ? 'saved ✓' : 'SAVE FAILED')
+    .catch(() => $('#save').textContent = 'SAVE FAILED'), 600);
+  stats();
+}
+function stats() {
+  let v = 0, n = 0;
+  for (const k in SEL.clips) for (const r of SEL.clips[k]) { v += r.b - r.a; n++; }
+  const p = Object.keys(SEL.photos).length;
+  $('#stats').innerHTML = `<b>${n}</b> video pieces (${Math.round(v/60*10)/10} min) · <b>${p}</b> photos · ≈ <b>${Math.round((v + p*2)/60*10)/10} min</b> of footage`;
+}
+
+/* ---------- video list ---------- */
+function buildList() {
+  const L = $('#list'); L.innerHTML = '';
+  const f = document.createElement('div'); f.className = 'filter';
+  f.innerHTML = `<label><input type="checkbox" ${onlySel?'checked':''}> only clips with selected pieces</label>`;
+  L.appendChild(f);
+  f.querySelector('input').onchange = e => { onlySel = e.target.checked; buildList(); };
+  const V = videos();
+  if (!V.length) { L.insertAdjacentHTML('beforeend', `<div class="empty">${D.status.scanning ? 'Indexing…' : 'No videos found.'}</div>`); return; }
+  let day = null;
+  for (const c of V) {
+    const rs = SEL.clips[c.path] || [];
+    if (onlySel && !rs.length) continue;
+    if (c.day !== day) {
+      day = c.day;
+      const h = document.createElement('div'); h.className = 'dayh';
+      h.innerHTML = `${dayLabel(day)} <small>· ${plural(V.filter(x => x.day === day).length, 'clip')}</small>`; L.appendChild(h);
+    }
+    const it = document.createElement('div'); it.className = 'item' + (cur && cur.id === c.id ? ' on' : ''); it.id = 'it_' + c.id;
+    const best = rs.reduce((m, r) => Math.max(m, r.stars||0), 0);
+    const tags = (c.hdr ? '<span class="tag">HDR</span>' : '') + (c.play === 'none' ? '<span class="tag">✕</span>' : '');
+    it.innerHTML = `<img loading="lazy" src="/thumb/${c.id}" alt="" ${noImg}><div class="meta"><div class="t">${c.time} · ${fmt(c.dur).replace(/\.\d$/,'')}${tags}</div>
+      <div class="p" title="${esc(c.path)}">${esc(folderName(c.folder))}</div>${rs.length ? `<span class="badge">${rs.length} piece${rs.length>1?'s':''} · ${'★'.repeat(best)}</span>` : ''}</div>`;
+    it.onclick = () => openClip(c.id);
+    L.appendChild(it);
+  }
+}
+function refreshItem(id) { buildList(); const el = document.getElementById('it_' + id); if (el) el.scrollIntoView({block:'nearest'}); }
+
+let waitT = null;
+function openClip(id) {
+  cur = D.videos.find(c => c.id === id); pendIn = null; if (!cur) return;
+  document.querySelectorAll('.item.on').forEach(e => e.classList.remove('on'));
+  const el = document.getElementById('it_' + id); if (el) { el.classList.add('on'); el.scrollIntoView({block:'nearest'}); }
+  $('#vtitle').textContent = `${dayLabel(cur.day)} · ${cur.time} · ${cur.path}`;
+  loadVideo(cur);
+  drawRanges(); drawBar();
+}
+function loadVideo(c) {
+  clearTimeout(waitT);
+  fetch('/api/video/' + c.id).then(r => r.json()).then(s => {
+    if (cur !== c) return;
+    const W = $('#vwait');
+    if (s.ready) {
+      W.style.display = 'none';
+      const rs = SEL.clips[c.path] || [];
+      vid.onloadedmetadata = () => { if (rs.length) vid.currentTime = rs[0].a; drawBar(); };
+      vid.src = '/video/' + c.id;
+    } else {
+      vid.removeAttribute('src'); vid.load();
+      W.style.display = 'flex';
+      W.innerHTML = s.state === 'error' ? `Can't play this file.<br><small>${esc(s.message)}</small>` : `Preparing a browser preview of this clip…<br><small>${esc(s.message || '')}</small>`;
+      if (s.state !== 'error') waitT = setTimeout(() => loadVideo(c), 2000);
+    }
+  });
+}
+function drawBar() {
+  const B = $('#bar'); if (!cur) return;
+  const dur = vid.duration || cur.dur || 1; B.innerHTML = '';
+  const step = dur > 600 ? 120 : dur > 300 ? 60 : dur > 90 ? 30 : 10;
+  for (let t = step; t < dur; t += step) { const k = document.createElement('div'); k.className = 'tick'; k.style.left = (t/dur*100) + '%'; k.innerHTML = `<span>${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}</span>`; B.appendChild(k); }
+  for (const r of (SEL.clips[cur.path] || [])) { const g = document.createElement('div'); g.className = 'rg'; g.style.left = (r.a/dur*100)+'%'; g.style.width = ((r.b-r.a)/dur*100)+'%'; g.style.opacity = .35 + (r.stars||3)*.13; B.appendChild(g); }
+  if (pendIn != null) { const p = document.createElement('div'); p.className = 'pend'; p.style.left = (pendIn/dur*100)+'%'; B.appendChild(p); }
+  const h = document.createElement('div'); h.className = 'head'; h.id = 'head'; B.appendChild(h); moveHead();
+}
+function moveHead() { const h = $('#head'); const dur = vid.duration || (cur && cur.dur) || 1; if (h) h.style.left = (vid.currentTime/dur*100) + '%';
+  $('#tm').textContent = fmt(vid.currentTime) + ' / ' + fmt(dur) + (pendIn != null ? `   ·   IN at ${fmt(pendIn)} – press O to finish` : ''); }
+vid.ontimeupdate = moveHead;
+$('#bar').onclick = e => { if (!cur) return; const r = e.currentTarget.getBoundingClientRect(); vid.currentTime = (e.clientX - r.left) / r.width * (vid.duration || cur.dur); };
+
+function stars(n, cb) {
+  const s = document.createElement('span'); s.className = 'stars';
+  for (let i = 1; i <= 5; i++) { const x = document.createElement('span'); x.textContent = '★'; if (i <= n) x.className = 'on'; x.title = i + ' star' + (i>1?'s':''); x.onclick = ev => { ev.stopPropagation(); cb(i); }; s.appendChild(x); }
+  return s;
+}
+function drawRanges() {
+  const T = $('#ranges'); T.innerHTML = '';
+  if (!cur) return;
+  const rs = (SEL.clips[cur.path] || []);
+  rs.sort((a, b) => a.a - b.a);
+  if (!rs.length) { T.innerHTML = '<tr><td colspan="6" style="color:var(--mute)">No pieces selected from this clip yet.</td></tr>'; return; }
+  rs.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td style="white-space:nowrap;font-variant-numeric:tabular-nums">${fmt(r.a)} → ${fmt(r.b)} <small style="color:var(--mute)">(${(r.b-r.a).toFixed(1)} s)</small></td>
+      <td style="white-space:nowrap"><button class="mini" data-a="play">▶ play</button> <button class="mini" data-a="setA" title="Set start to current time">start=now</button> <button class="mini" data-a="setB" title="Set end to current time">end=now</button></td>
+      <td class="st"></td><td><input type="checkbox" ${r.nat?'checked':''}></td>
+      <td><input type="text" value="${esc(r.cap)}" placeholder="e.g. place · what happens"></td>
+      <td><button class="mini del" data-a="del">✕</button></td>`;
+    tr.querySelector('.st').appendChild(stars(r.stars || 3, n => { r.stars = n; drawRanges(); drawBar(); refreshItem(cur.id); save(); }));
+    tr.querySelector('input[type=checkbox]').onchange = e => { r.nat = e.target.checked; save(); };
+    tr.querySelector('input[type=text]').oninput = e => { r.cap = e.target.value; save(); };
+    tr.querySelectorAll('button').forEach(b => b.onclick = () => {
+      const a = b.dataset.a;
+      if (a === 'play') { vid.currentTime = r.a; vid.play(); stopAt = r.b; }
+      if (a === 'setA') { if (vid.currentTime < r.b) r.a = +vid.currentTime.toFixed(2); }
+      if (a === 'setB') { if (vid.currentTime > r.a) r.b = +vid.currentTime.toFixed(2); }
+      if (a === 'del') rs.splice(i, 1);
+      if (a !== 'play') { if (!rs.length) delete SEL.clips[cur.path]; drawRanges(); drawBar(); refreshItem(cur.id); save(); }
+    });
+    T.appendChild(tr);
+  });
+}
+let stopAt = null;
+vid.addEventListener('timeupdate', () => { if (stopAt != null && vid.currentTime >= stopAt) { vid.pause(); stopAt = null; } });
+function markIn() { if (!cur) return; pendIn = +vid.currentTime.toFixed(2); drawBar(); moveHead(); }
+function markOut() {
+  if (!cur) return;
+  const t = +vid.currentTime.toFixed(2);
+  if (pendIn == null || t - pendIn < 0.5) { if (pendIn == null) { pendIn = t; drawBar(); moveHead(); } return; }
+  (SEL.clips[cur.path] = SEL.clips[cur.path] || []).push({a: pendIn, b: t, nat: false, cap: '', stars: 3});
+  pendIn = null; drawRanges(); drawBar(); refreshItem(cur.id); save();
+}
+function nextClip(d) { if (!cur) return; const L = videos(); const i = L.findIndex(c => c.id === cur.id); const n = L[i + d]; if (n) openClip(n.id); }
+$('#bIn').onclick = markIn; $('#bOut').onclick = markOut;
+$('#bBack').onclick = () => vid.currentTime -= 5; $('#bFwd').onclick = () => vid.currentTime += 5;
+$('#bPrev').onclick = () => nextClip(-1); $('#bNext').onclick = () => nextClip(1);
+$('#bSpd').onclick = e => { vid.playbackRate = vid.playbackRate === 1 ? 2 : vid.playbackRate === 2 ? 4 : 1; e.target.textContent = 'Speed ' + vid.playbackRate + '×'; };
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' && e.target.type === 'text' || e.target.tagName === 'SELECT') return;
+  if ($('#vw').classList.contains('on')) return viewerKey(e);
+  if (!$('#video').classList.contains('on')) return;
+  const k = e.key.toLowerCase();
+  if (k === 'i') markIn(); else if (k === 'o') markOut();
+  else if (k === 'j') vid.currentTime -= 5; else if (k === 'l') vid.currentTime += 5;
+  else if (k === 'arrowleft') { vid.currentTime -= 1; e.preventDefault(); } else if (k === 'arrowright') { vid.currentTime += 1; e.preventDefault(); }
+  else if (k === ' ') { vid.paused ? vid.play() : vid.pause(); e.preventDefault(); }
+  else if (k === 'n') nextClip(1); else if (k === 'p') nextClip(-1);
+});
+
+/* ---------- photo grid ---------- */
+const isSel = p => SEL.photos[p.path] != null;
+const edOf = p => SEL.edits[p.path];
+const hasEd = p => { const e = edOf(p); return !!(e && (e.crop || (e.adj && Object.values(e.adj).some(v => +v)))); };
+function adjQuery(adj, crop) {
+  const q = [];
+  if (adj) for (const k in adj) if (+adj[k]) q.push(k + '=' + adj[k]);
+  if (crop) q.push('crop=' + [crop.x, crop.y, crop.w, crop.h].map(v => v.toFixed(4)).join(','));
+  return q.join('&');
+}
+function thumbSrc(p) { if (!hasEd(p)) return '/thumb/' + p.id; const e = edOf(p); return `/img/${p.id}?w=360&${adjQuery(e.adj, e.crop)}`; }
+
+function photoCard(p, list, i, rebuild) {
+  const c = document.createElement('div'); c.className = 'ph' + (isSel(p) ? ' sel' : '');
+  c.innerHTML = `<img loading="lazy" src="${thumbSrc(p)}" alt="" title="${esc(p.path)}">${hasEd(p) ? '<span class="ed">EDITED</span>' : ''}<button class="zoom" title="Preview / crop / fix">⤢</button><div class="row"><span>${p.time} · ${esc(folderName(p.folder))}</span></div>`;
+  const row = c.querySelector('.row');
+  if (isSel(p)) row.appendChild(stars(SEL.photos[p.path], n => { SEL.photos[p.path] = n; rebuild(); save(); }));
+  c.querySelector('img').onclick = () => { if (isSel(p)) delete SEL.photos[p.path]; else SEL.photos[p.path] = 3; rebuild(); save(); };
+  c.querySelector('.zoom').onclick = () => openViewer(list, i, rebuild);
+  return c;
+}
+function buildPhotos() {
+  const P = $('#photos'); P.innerHTML = '';
+  const t = document.createElement('div'); t.className = 'toolbar';
+  t.innerHTML = `<label><input type="checkbox" ${photoOnlySel?'checked':''}> show only selected</label><span>Click a photo to select / unselect · ⤢ opens preview with crop &amp; light fixes</span>`;
+  t.querySelector('input').onchange = e => { photoOnlySel = e.target.checked; buildPhotos(); };
+  P.appendChild(t);
+  const list = photos().filter(p => !photoOnlySel || isSel(p));
+  if (!list.length) { P.insertAdjacentHTML('beforeend', `<div class="empty">${D.status.scanning ? 'Indexing…' : 'No photos here.'}</div>`); return; }
+  let day = null, grid = null;
+  list.forEach((p, i) => {
+    if (p.day !== day) {
+      day = p.day;
+      const h = document.createElement('h3'); h.innerHTML = `${dayLabel(day)} <small>· ${plural(list.filter(x => x.day === day).length, 'photo')}</small>`; P.appendChild(h);
+      grid = document.createElement('div'); grid.className = 'grid'; P.appendChild(grid);
+    }
+    grid.appendChild(photoCard(p, list, i, buildPhotosKeep));
+  });
+}
+function buildPhotosKeep() { const y = $('#photos').scrollTop; buildPhotos(); $('#photos').scrollTop = y; }
+
+/* ---------- viewer: preview, select, light fixes, crop ---------- */
+const SL = [['exp','Exposure',-2,2,.05],['hl','Highlights',0,1,.01],['sh','Shadows',0,1,.01],['con','Contrast',-1,1,.01],['sat','Saturation',-1,1,.01],['tmp','Warmth',-1,1,.01]];
+const ASP = [['Free',0],['Original',-1],['16:9',16/9],['9:16',9/16],['4:3',4/3],['1:1',1]];
+const VW = {list:null, i:0, rebuild:null, crop:false, asp:0, before:false, cr:null};
+let imgT = null, drag = null;
+const pic = $('#vwPic'), box = $('#cropBox');
+const vp = () => VW.list[VW.i];
+function ed(p, create) { if (!SEL.edits[p.path] && create) SEL.edits[p.path] = {}; return SEL.edits[p.path] || {}; }
+function cleanEd(p) { const e = SEL.edits[p.path]; if (e && !e.crop && !(e.adj && Object.values(e.adj).some(v => +v))) delete SEL.edits[p.path]; }
+function openViewer(list, i, rebuild) { VW.list = list; VW.i = i; VW.rebuild = rebuild; VW.crop = false; $('#vw').classList.add('on'); showPhoto(); }
+function closeViewer() { $('#vw').classList.remove('on'); VW.crop = false; box.style.display = 'none'; if (VW.rebuild) VW.rebuild(); }
+function buildSide() {
+  const p = vp(), e = ed(p), a = e.adj || {};
+  const gps = p.gps ? ` · <a href="https://www.openstreetmap.org/?mlat=${p.gps[0]}&mlon=${p.gps[1]}#map=15/${p.gps[0]}/${p.gps[1]}" target="_blank" rel="noopener">map</a>` : '';
+  $('#vwInfo').innerHTML = `<b style="color:var(--text);font-size:14px">${dayLabel(p.day)} · ${p.time}</b><br>${esc(p.path)}<br>${p.w||'?'}×${p.h||'?'}${gps} · <a href="/full/${p.id}" target="_blank">original</a><br>${VW.i+1} / ${VW.list.length}`;
+  const s = isSel(p); $('#vwSel').className = 'bigsel' + (s ? ' on' : ''); $('#vwSel').textContent = s ? '✓ Selected (S)' : 'Select (S)';
+  const st = $('#vwStars'); st.innerHTML = '';
+  if (s) st.appendChild(stars(SEL.photos[p.path], n => { SEL.photos[p.path] = n; buildSide(); save(); }));
+  const S = $('#sliders'); S.innerHTML = '';
+  for (const [k, lab, mn, mx, stp] of SL) {
+    const d = document.createElement('div'); d.className = 'sl';
+    d.innerHTML = `<label title="double-click slider to reset">${lab}</label><input type="range" min="${mn}" max="${mx}" step="${stp}" value="${a[k]||0}"><output>${(+(a[k]||0)).toFixed(2)}</output>`;
+    const inp = d.querySelector('input');
+    inp.oninput = () => { const x = ed(p, true); x.adj = x.adj || {}; x.adj[k] = +inp.value; d.querySelector('output').textContent = (+inp.value).toFixed(2); cleanEd(p); loadPic(); save(); };
+    inp.ondblclick = () => { inp.value = 0; inp.oninput(); };
+    S.appendChild(d);
+  }
+  const C = $('#cropAsp'); C.innerHTML = '';
+  for (const [lab, r] of ASP) {
+    const b = document.createElement('button'); b.textContent = lab; if (VW.asp === r) b.className = 'on';
+    b.onclick = () => { VW.asp = r; if (VW.cr) { fitAspect(); drawBox(); saveCrop(); } buildSide(); }; C.appendChild(b);
+  }
+  $('#cOn').className = VW.crop ? 'on' : '';
+}
+function loadPic() {
+  const p = vp(), e = ed(p);
+  clearTimeout(imgT);
+  imgT = setTimeout(() => {
+    $('#vwBusy').textContent = 'loading…';
+    const q = VW.before ? '' : adjQuery(e.adj, null);
+    pic.onload = () => { $('#vwBusy').textContent = VW.before ? 'BEFORE (original)' : ''; drawBox(); };
+    pic.onerror = () => { $('#vwBusy').textContent = 'could not load this photo'; };
+    pic.src = `/img/${p.id}?w=1800&${q}`;
+  }, 120);
+}
+function showPhoto() {
+  const p = vp(), e = ed(p); VW.cr = e.crop ? {...e.crop} : null; buildSide(); loadPic();
+  [1, -1].forEach(d => { const n = VW.list[VW.i + d]; if (n) { const im = new Image(); im.src = `/img/${n.id}?w=1800&${adjQuery(ed(n).adj, null)}`; } });
+}
+function nav(d) { const n = VW.i + d; if (n >= 0 && n < VW.list.length) { VW.i = n; VW.crop = false; showPhoto(); } }
+function drawBox() {
+  if (!VW.cr) { box.style.display = 'none'; return; }
+  const W = pic.clientWidth, H = pic.clientHeight, c = VW.cr;
+  box.style.display = 'block'; box.style.left = c.x*W + 'px'; box.style.top = c.y*H + 'px'; box.style.width = c.w*W + 'px'; box.style.height = c.h*H + 'px';
+  box.style.pointerEvents = VW.crop ? 'auto' : 'none';
+  box.querySelectorAll('i').forEach(i => i.style.display = VW.crop ? 'block' : 'none');
+}
+function aspectN() { if (!pic.naturalWidth) return 0; const r = VW.asp === -1 ? pic.naturalWidth / pic.naturalHeight : VW.asp; return r ? r * (pic.naturalHeight / pic.naturalWidth) : 0; }
+function fitAspect() { const r = aspectN(); if (!r || !VW.cr) return; const c = VW.cr; let w = c.w, h = w / r; if (h > 1) { h = 1; w = h * r; } if (w > 1) { w = 1; h = w / r; } c.x = Math.min(c.x, 1 - w); c.y = Math.min(c.y, 1 - h); c.w = w; c.h = h; }
+function saveCrop() {
+  const p = vp(), x = ed(p, true);
+  if (VW.cr && VW.cr.w > 0.02 && VW.cr.h > 0.02) x.crop = {x:+VW.cr.x.toFixed(4), y:+VW.cr.y.toFixed(4), w:+VW.cr.w.toFixed(4), h:+VW.cr.h.toFixed(4)};
+  else delete x.crop;
+  cleanEd(p); save();
+}
+function pt(e) { const r = pic.getBoundingClientRect(); return {x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))}; }
+$('#vwImg').addEventListener('mousedown', e => {
+  if (!VW.crop || e.target.closest('.navb')) return;
+  const q = pt(e), c = VW.cr;
+  if (e.target.tagName === 'I') drag = {mode: e.target.className, start: q, orig: {...c}};
+  else if (c && q.x > c.x && q.x < c.x + c.w && q.y > c.y && q.y < c.y + c.h) drag = {mode: 'move', start: q, orig: {...c}};
+  else { VW.cr = {x: q.x, y: q.y, w: 0, h: 0}; drag = {mode: 'se', start: q, orig: {...VW.cr}}; }
+  e.preventDefault();
+});
+window.addEventListener('mousemove', e => {
+  if (!drag) return;
+  const q = pt(e), o = drag.orig, dx = q.x - drag.start.x, dy = q.y - drag.start.y; let c = {...o};
+  if (drag.mode === 'move') { c.x = Math.min(1 - o.w, Math.max(0, o.x + dx)); c.y = Math.min(1 - o.h, Math.max(0, o.y + dy)); }
+  else {
+    let x0 = o.x, y0 = o.y, x1 = o.x + o.w, y1 = o.y + o.h;
+    if (drag.mode.includes('w')) x0 = Math.min(x1 - .02, o.x + dx);
+    if (drag.mode.includes('e')) x1 = Math.max(x0 + .02, o.x + o.w + dx);
+    if (drag.mode.includes('n')) y0 = Math.min(y1 - .02, o.y + dy);
+    if (drag.mode.includes('s')) y1 = Math.max(y0 + .02, o.y + o.h + dy);
+    x0 = Math.max(0, x0); y0 = Math.max(0, y0); x1 = Math.min(1, x1); y1 = Math.min(1, y1);
+    const r = aspectN();
+    if (r) {
+      let w = x1 - x0, h = w / r;
+      if (drag.mode.includes('n')) y0 = y1 - h; else y1 = y0 + h;
+      if (y1 > 1 || y0 < 0) { if (y1 > 1) y1 = 1; if (y0 < 0) y0 = 0; h = y1 - y0; w = h * r; if (drag.mode.includes('w')) x0 = x1 - w; else x1 = x0 + w; }
+    }
+    c = {x: x0, y: y0, w: x1 - x0, h: y1 - y0};
+  }
+  VW.cr = c; drawBox();
+});
+window.addEventListener('mouseup', () => { if (drag) { drag = null; saveCrop(); buildSide(); } });
+window.addEventListener('resize', drawBox);
+function toggleCrop() { VW.crop = !VW.crop; if (VW.crop && !VW.cr) { VW.cr = {x: .1, y: .1, w: .8, h: .8}; fitAspect(); saveCrop(); } drawBox(); buildSide(); }
+$('#cOn').onclick = toggleCrop;
+$('#cClear').onclick = () => { VW.cr = null; VW.crop = false; saveCrop(); drawBox(); buildSide(); };
+$('#vwSel').onclick = () => { const p = vp(); if (isSel(p)) delete SEL.photos[p.path]; else SEL.photos[p.path] = 3; buildSide(); save(); };
+$('#aAuto').onclick = () => { const p = vp(); $('#vwBusy').textContent = 'auto…'; fetch('/api/auto/' + p.id).then(r => r.json()).then(a => { ed(p, true).adj = a; cleanEd(p); buildSide(); loadPic(); save(); }); };
+$('#aReset').onclick = () => { const p = vp(), x = ed(p, true); delete x.adj; cleanEd(p); buildSide(); loadPic(); save(); };
+const bef = v => { if (VW.before !== v) { VW.before = v; loadPic(); } };
+$('#aBefore').onmousedown = () => bef(true); $('#aBefore').onmouseup = $('#aBefore').onmouseleave = () => bef(false);
+$('#vwPrev').onclick = () => nav(-1); $('#vwNext').onclick = () => nav(1); $('#vwClose').onclick = closeViewer;
+function viewerKey(e) {
+  const k = e.key.toLowerCase();
+  if (k === 'escape') { if (VW.crop) toggleCrop(); else closeViewer(); }
+  else if (k === 'arrowleft') nav(-1);
+  else if (k === 'arrowright') nav(1);
+  else if (k === 's' || k === ' ') { $('#vwSel').onclick(); e.preventDefault(); }
+  else if (['1','2','3','4','5'].includes(k)) { const p = vp(); SEL.photos[p.path] = +k; buildSide(); save(); }
+  else if (k === 'a') $('#aAuto').onclick();
+  else if (k === 'c') toggleCrop();
+  else if (k === 'b' && !e.repeat) bef(true);
+}
+document.addEventListener('keyup', e => { if (e.key.toLowerCase() === 'b') bef(false); });
+
+/* ---------- tabs ---------- */
+function showTab(t) {
+  const on = (id, v) => $(id).classList.toggle('on', v);
+  if (t !== 'video') vid.pause();
+  on('#tV', t === 'video'); on('#tP', t === 'photos');
+  on('#video', t === 'video'); on('#photos', t === 'photos');
+  history.replaceState(null, '', t === 'photos' ? '#photos' : location.pathname);
+}
+if (location.hash === '#photos') showTab('photos');
+$('#tV').onclick = () => showTab('video');
+$('#tP').onclick = () => showTab('photos');
+</script>
+</body>
+</html>
