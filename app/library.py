@@ -62,6 +62,13 @@ def item_id(rel):
 def _ensure_dirs():
     for d in (STATE, THUMBS, PROXIES):
         os.makedirs(d, exist_ok=True)
+    # instructions for agents / scripts that read the selections, kept next to the data
+    try:
+        import shutil
+        shutil.copyfile(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'AGENTS.md'),
+                        os.path.join(STATE, 'AGENTS.md'))
+    except OSError as e:
+        print('could not write AGENTS.md:', e, flush=True)
 
 
 # ---------------------------------------------------------------- metadata
