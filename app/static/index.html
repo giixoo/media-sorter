@@ -81,9 +81,15 @@ td input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--l
 /* viewer / editor */
 #vw{position:fixed;inset:0;background:#0b0c0e;display:none;z-index:20}
 #vw.on{display:flex}
-#vwImg{flex:1;position:relative;display:flex;align-items:center;justify-content:center;min-width:0;user-select:none}
-#vwImg .wrap{position:relative;line-height:0}
-#vwImg img{max-width:calc(100vw - 340px);max-height:calc(100vh - 20px);display:block}
+#vwImg{flex:1;position:relative;overflow:hidden;min-width:0;user-select:none}
+#vwImg.pan{cursor:grab}#vwImg.panning,#vwImg.panning *{cursor:grabbing!important}
+#vwImg .wrap{position:absolute;left:0;top:0;line-height:0}
+#vwImg img{display:block;width:100%;height:100%}
+#cropBox.view{box-shadow:0 0 0 9999px #0b0c0e;border-color:transparent}#cropBox.view .g{display:none}
+#vwZoom{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:3;display:flex;gap:4px;align-items:center;background:rgba(0,0,0,.6);border-radius:6px;padding:4px}
+#vwZoom button{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:4px;cursor:pointer;padding:3px 9px;font-size:13px;min-width:30px}
+#vwZoom button:hover{border-color:var(--acc)}
+#vwZoom span{color:var(--mute);font-size:12px;min-width:46px;text-align:center;font-variant-numeric:tabular-nums}
 #cropBox{position:absolute;border:2px solid var(--acc);box-shadow:0 0 0 9999px rgba(0,0,0,.55);cursor:move;display:none}
 #cropBox i{position:absolute;width:14px;height:14px;background:var(--acc);border-radius:2px}
 #cropBox i.nw{left:-8px;top:-8px;cursor:nwse-resize}#cropBox i.ne{right:-8px;top:-8px;cursor:nesw-resize}
@@ -102,11 +108,11 @@ td input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--l
 .btns button:hover,.navb:hover{border-color:var(--acc)}
 .bigsel{width:100%;padding:9px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-weight:700;cursor:pointer;margin-top:8px}
 .bigsel.on{background:var(--acc);color:#111;border-color:var(--acc)}
-.navb{position:absolute;top:50%;transform:translateY(-50%);font-size:22px;padding:10px 14px;background:rgba(0,0,0,.5)}
+.navb{position:absolute;z-index:3;top:50%;transform:translateY(-50%);font-size:22px;padding:10px 14px;background:rgba(0,0,0,.5)}
 #vwPrev{left:10px}#vwNext{right:10px}
-#vwBusy{position:absolute;top:12px;left:14px;color:var(--mute);font-size:12px}
+#vwBusy{position:absolute;z-index:3;top:12px;left:14px;color:var(--mute);font-size:12px}
 .filter{color:var(--mute);font-size:12px;padding:8px 12px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
-@media (max-width:800px){.view.on{flex-direction:column}#list{width:100%;height:35vh}#vw.on{flex-direction:column}#vwImg img{max-width:100vw;max-height:60vh}#vwSide{width:100%}}
+@media (max-width:800px){.view.on{flex-direction:column}#list{width:100%;height:35vh}#vw.on{flex-direction:column}#vwImg{flex:none;height:60vh}#vwSide{width:100%}}
 </style>
 </head>
 <body>
@@ -151,6 +157,7 @@ td input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--l
   <div id="vwImg">
     <span id="vwBusy"></span>
     <div class="wrap"><img id="vwPic" alt=""><div id="cropBox"><div class="g"></div><i class="nw"></i><i class="ne"></i><i class="sw"></i><i class="se"></i></div></div>
+    <div id="vwZoom"><button id="zOut" title="Zoom out (−)">−</button><span id="zLab"></span><button id="zIn" title="Zoom in (+)">+</button><button id="zFit" title="Fit to screen (0)">Fit</button><button id="z100" title="Actual pixels">1:1</button></div>
     <button class="navb" id="vwPrev" title="Previous (←)">‹</button><button class="navb" id="vwNext" title="Next (→)">›</button>
   </div>
   <div id="vwSide">
@@ -164,9 +171,11 @@ td input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--l
     <h4>Crop</h4>
     <div class="btns" id="cropAsp"></div>
     <div class="btns" style="margin-top:6px"><button id="cOn">✂ Crop (C)</button><button id="cClear">Remove crop</button></div>
-    <div class="info" style="margin-top:6px">Drag on the photo to draw, drag inside to move, corners to resize.</div>
+    <div class="info" style="margin-top:6px">Drag on the photo to draw, drag inside to move, corners to resize. Outside crop mode the viewer shows the cropped result.</div>
+    <h4>Zoom</h4>
+    <div class="info">Mouse wheel zooms at the cursor · drag to pan (in crop mode: right- or middle-drag) · double-click toggles fit / zoom · <kbd>+</kbd>/<kbd>−</kbd> zoom · <kbd>0</kbd> fit</div>
     <h4>Keys</h4>
-    <div class="info"><kbd>←</kbd>/<kbd>→</kbd> previous / next · <kbd>S</kbd> select · <kbd>1</kbd>–<kbd>5</kbd> stars · <kbd>A</kbd> auto fix · <kbd>C</kbd> crop · hold <kbd>B</kbd> before · <kbd>Esc</kbd> close</div>
+    <div class="info"><kbd>←</kbd>/<kbd>→</kbd> previous / next · <kbd>S</kbd> select · <kbd>1</kbd>–<kbd>5</kbd> stars · <kbd>A</kbd> auto fix · <kbd>C</kbd> crop · <kbd>+</kbd>/<kbd>−</kbd>/<kbd>0</kbd> zoom · hold <kbd>B</kbd> before · <kbd>Esc</kbd> close</div>
   </div>
 </div>
 <script>
@@ -412,14 +421,53 @@ function buildPhotosKeep() { const y = $('#photos').scrollTop; buildPhotos(); $(
 /* ---------- viewer: preview, select, light fixes, crop ---------- */
 const SL = [['exp','Exposure',-2,2,.05],['hl','Highlights',0,1,.01],['sh','Shadows',0,1,.01],['con','Contrast',-1,1,.01],['sat','Saturation',-1,1,.01],['tmp','Warmth',-1,1,.01]];
 const ASP = [['Free',0],['Original',-1],['16:9',16/9],['9:16',9/16],['4:3',4/3],['1:1',1]];
-const VW = {list:null, i:0, rebuild:null, crop:false, asp:0, before:false, cr:null};
-let imgT = null, drag = null;
-const pic = $('#vwPic'), box = $('#cropBox');
+const VW = {list:null, i:0, rebuild:null, crop:false, asp:0, before:false, cr:null, v:null, fit:true, hi:false};
+let imgT = null, drag = null, pan = null;
+const pic = $('#vwPic'), box = $('#cropBox'), stage = $('#vwImg'), wrap = $('#vwImg .wrap');
+const FULL = {x:0, y:0, w:1, h:1};
 const vp = () => VW.list[VW.i];
 function ed(p, create) { if (!SEL.edits[p.path] && create) SEL.edits[p.path] = {}; return SEL.edits[p.path] || {}; }
 function cleanEd(p) { const e = SEL.edits[p.path]; if (e && !e.crop && !(e.adj && Object.values(e.adj).some(v => +v))) delete SEL.edits[p.path]; }
 function openViewer(list, i, rebuild) { VW.list = list; VW.i = i; VW.rebuild = rebuild; VW.crop = false; $('#vw').classList.add('on'); showPhoto(); }
-function closeViewer() { $('#vw').classList.remove('on'); VW.crop = false; box.style.display = 'none'; if (VW.rebuild) VW.rebuild(); }
+function closeViewer() { $('#vw').classList.remove('on'); VW.crop = false; box.style.display = 'none'; pan = drag = null; if (VW.rebuild) VW.rebuild(); }
+/* view = {dw: displayed width of the whole image, ox/oy: its top-left inside the stage}; resolution-independent */
+const picAR = () => pic.naturalWidth ? pic.naturalWidth / pic.naturalHeight : 0;
+function fitDW(r) { const ar = picAR(), W = stage.clientWidth - 24, H = stage.clientHeight - 24; return Math.max(20, Math.min(W / r.w, H * ar / r.h)); }
+function fitRect(r) {
+  const ar = picAR(); if (!ar) return;
+  const dw = fitDW(r);
+  VW.v = {dw, ox: stage.clientWidth / 2 - (r.x + r.w / 2) * dw, oy: stage.clientHeight / 2 - (r.y + r.h / 2) * dw / ar};
+  applyView();
+}
+const fitTarget = () => !VW.crop && VW.cr ? VW.cr : FULL;
+function resetView() { VW.fit = true; fitRect(fitTarget()); }
+function applyView() {
+  const v = VW.v, ar = picAR(); if (!v || !ar) return;
+  wrap.style.width = v.dw + 'px'; wrap.style.height = v.dw / ar + 'px'; wrap.style.left = v.ox + 'px'; wrap.style.top = v.oy + 'px';
+  stage.classList.toggle('pan', !VW.crop);
+  const ow = vp().w || pic.naturalWidth;
+  $('#zLab').textContent = VW.fit ? 'Fit' : Math.round(v.dw / ow * 100) + '%';
+  drawBox();
+  // zoomed past the 1800px preview -> fetch a sharper one once
+  if (!VW.hi && v.dw * (devicePixelRatio || 1) > pic.naturalWidth * 1.15 && ow > pic.naturalWidth * 1.1) { VW.hi = true; loadPic(); }
+}
+function zoomAt(f, cx, cy) {
+  const v = VW.v; if (!v) return;
+  if (cx == null) { cx = stage.clientWidth / 2; cy = stage.clientHeight / 2; }
+  const fit = fitDW(FULL), ow = vp().w || pic.naturalWidth;
+  const dw = Math.min(Math.max(v.dw * f, fit * .5), Math.max(ow * 4, fit * 4)), k = dw / v.dw;
+  v.ox = cx - (cx - v.ox) * k; v.oy = cy - (cy - v.oy) * k; v.dw = dw; VW.fit = false; applyView();
+}
+function zoomTo(dw) { if (VW.v) zoomAt(dw / VW.v.dw); }
+const stPt = e => { const r = stage.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+stage.addEventListener('wheel', e => { if (!VW.v) return; e.preventDefault(); zoomAt(Math.exp(-Math.max(-300, Math.min(300, e.deltaY)) * .0016), ...stPt(e)); }, {passive: false});
+stage.addEventListener('contextmenu', e => e.preventDefault());
+stage.addEventListener('dblclick', e => {
+  if (VW.crop || e.target.closest('.navb, #vwZoom') || !VW.v) return;
+  if (VW.fit) zoomAt(2.5, ...stPt(e)); else resetView();
+});
+$('#zIn').onclick = () => zoomAt(1.4); $('#zOut').onclick = () => zoomAt(1 / 1.4); $('#zFit').onclick = resetView;
+$('#z100').onclick = () => zoomTo((vp().w || pic.naturalWidth) / (devicePixelRatio || 1));
 function buildSide() {
   const p = vp(), e = ed(p), a = e.adj || {};
   const gps = p.gps ? ` · <a href="https://www.openstreetmap.org/?mlat=${p.gps[0]}&mlon=${p.gps[1]}#map=15/${p.gps[0]}/${p.gps[1]}" target="_blank" rel="noopener">map</a>` : '';
@@ -439,7 +487,7 @@ function buildSide() {
   const C = $('#cropAsp'); C.innerHTML = '';
   for (const [lab, r] of ASP) {
     const b = document.createElement('button'); b.textContent = lab; if (VW.asp === r) b.className = 'on';
-    b.onclick = () => { VW.asp = r; if (VW.cr) { fitAspect(); drawBox(); saveCrop(); } buildSide(); }; C.appendChild(b);
+    b.onclick = () => { VW.asp = r; if (VW.cr) { fitAspect(); saveCrop(); if (VW.crop) drawBox(); else resetView(); } buildSide(); }; C.appendChild(b);
   }
   $('#cOn').className = VW.crop ? 'on' : '';
 }
@@ -449,25 +497,25 @@ function loadPic() {
   imgT = setTimeout(() => {
     $('#vwBusy').textContent = 'loading…';
     const q = VW.before ? '' : adjQuery(e.adj, null);
-    pic.onload = () => { $('#vwBusy').textContent = VW.before ? 'BEFORE (original)' : ''; drawBox(); };
+    pic.onload = () => { $('#vwBusy').textContent = VW.before ? 'BEFORE (original)' : ''; if (VW.fit || !VW.v) resetView(); else applyView(); };
     pic.onerror = () => { $('#vwBusy').textContent = 'could not load this photo'; };
-    pic.src = `/img/${p.id}?w=1800&${q}`;
+    pic.src = `/img/${p.id}?w=${VW.hi ? 3200 : 1800}&${q}`;
   }, 120);
 }
 function showPhoto() {
-  const p = vp(), e = ed(p); VW.cr = e.crop ? {...e.crop} : null; buildSide(); loadPic();
+  const p = vp(), e = ed(p); VW.cr = e.crop ? {...e.crop} : null; VW.fit = true; VW.hi = false; VW.v = null; wrap.style.width = '0'; box.style.display = 'none'; buildSide(); loadPic();
   [1, -1].forEach(d => { const n = VW.list[VW.i + d]; if (n) { const im = new Image(); im.src = `/img/${n.id}?w=1800&${adjQuery(ed(n).adj, null)}`; } });
 }
 function nav(d) { const n = VW.i + d; if (n >= 0 && n < VW.list.length) { VW.i = n; VW.crop = false; showPhoto(); } }
 function drawBox() {
   if (!VW.cr) { box.style.display = 'none'; return; }
   const W = pic.clientWidth, H = pic.clientHeight, c = VW.cr;
-  box.style.display = 'block'; box.style.left = c.x*W + 'px'; box.style.top = c.y*H + 'px'; box.style.width = c.w*W + 'px'; box.style.height = c.h*H + 'px';
+  box.style.display = 'block'; box.classList.toggle('view', !VW.crop); box.style.left = c.x*W + 'px'; box.style.top = c.y*H + 'px'; box.style.width = c.w*W + 'px'; box.style.height = c.h*H + 'px';
   box.style.pointerEvents = VW.crop ? 'auto' : 'none';
   box.querySelectorAll('i').forEach(i => i.style.display = VW.crop ? 'block' : 'none');
 }
 function aspectN() { if (!pic.naturalWidth) return 0; const r = VW.asp === -1 ? pic.naturalWidth / pic.naturalHeight : VW.asp; return r ? r * (pic.naturalHeight / pic.naturalWidth) : 0; }
-function fitAspect() { const r = aspectN(); if (!r || !VW.cr) return; const c = VW.cr; let w = c.w, h = w / r; if (h > 1) { h = 1; w = h * r; } if (w > 1) { w = 1; h = w / r; } c.x = Math.min(c.x, 1 - w); c.y = Math.min(c.y, 1 - h); c.w = w; c.h = h; }
+function fitAspect() { const r = aspectN(); if (!r || !VW.cr) return; const c = VW.cr; let w = c.w, h = w / r; if (h > 1) { h = 1; w = h * r; } if (w > 1) { w = 1; h = w / r; } const cx = c.x + c.w / 2, cy = c.y + c.h / 2; c.x = Math.min(Math.max(0, cx - w / 2), 1 - w); c.y = Math.min(Math.max(0, cy - h / 2), 1 - h); c.w = w; c.h = h; }
 function saveCrop() {
   const p = vp(), x = ed(p, true);
   if (VW.cr && VW.cr.w > 0.02 && VW.cr.h > 0.02) x.crop = {x:+VW.cr.x.toFixed(4), y:+VW.cr.y.toFixed(4), w:+VW.cr.w.toFixed(4), h:+VW.cr.h.toFixed(4)};
@@ -475,8 +523,12 @@ function saveCrop() {
   cleanEd(p); save();
 }
 function pt(e) { const r = pic.getBoundingClientRect(); return {x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))}; }
-$('#vwImg').addEventListener('mousedown', e => {
-  if (!VW.crop || e.target.closest('.navb')) return;
+stage.addEventListener('mousedown', e => {
+  if (e.target.closest('.navb, #vwZoom')) return;
+  if (!VW.crop || e.button !== 0) {
+    if (VW.v) { pan = {x: e.clientX, y: e.clientY, ox: VW.v.ox, oy: VW.v.oy}; stage.classList.add('panning'); }
+    e.preventDefault(); return;
+  }
   const q = pt(e), c = VW.cr;
   if (e.target.tagName === 'I') drag = {mode: e.target.className, start: q, orig: {...c}};
   else if (c && q.x > c.x && q.x < c.x + c.w && q.y > c.y && q.y < c.y + c.h) drag = {mode: 'move', start: q, orig: {...c}};
@@ -484,6 +536,7 @@ $('#vwImg').addEventListener('mousedown', e => {
   e.preventDefault();
 });
 window.addEventListener('mousemove', e => {
+  if (pan) { VW.v.ox = pan.ox + e.clientX - pan.x; VW.v.oy = pan.oy + e.clientY - pan.y; VW.fit = false; applyView(); return; }
   if (!drag) return;
   const q = pt(e), o = drag.orig, dx = q.x - drag.start.x, dy = q.y - drag.start.y; let c = {...o};
   if (drag.mode === 'move') { c.x = Math.min(1 - o.w, Math.max(0, o.x + dx)); c.y = Math.min(1 - o.h, Math.max(0, o.y + dy)); }
@@ -504,11 +557,18 @@ window.addEventListener('mousemove', e => {
   }
   VW.cr = c; drawBox();
 });
-window.addEventListener('mouseup', () => { if (drag) { drag = null; saveCrop(); buildSide(); } });
-window.addEventListener('resize', drawBox);
-function toggleCrop() { VW.crop = !VW.crop; if (VW.crop && !VW.cr) { VW.cr = {x: .1, y: .1, w: .8, h: .8}; fitAspect(); saveCrop(); } drawBox(); buildSide(); }
+window.addEventListener('mouseup', () => {
+  if (pan) { pan = null; stage.classList.remove('panning'); }
+  if (drag) { drag = null; saveCrop(); buildSide(); }
+});
+window.addEventListener('resize', () => { if (!$('#vw').classList.contains('on')) return; if (VW.fit) resetView(); else applyView(); });
+function toggleCrop() {
+  VW.crop = !VW.crop;
+  if (VW.crop && !VW.cr) { VW.cr = {...FULL}; fitAspect(); saveCrop(); }  // start from the whole photo
+  resetView(); buildSide();
+}
 $('#cOn').onclick = toggleCrop;
-$('#cClear').onclick = () => { VW.cr = null; VW.crop = false; saveCrop(); drawBox(); buildSide(); };
+$('#cClear').onclick = () => { VW.cr = null; VW.crop = false; saveCrop(); resetView(); buildSide(); };
 $('#vwSel').onclick = () => { const p = vp(); if (isSel(p)) delete SEL.photos[p.path]; else SEL.photos[p.path] = 3; buildSide(); save(); };
 $('#aAuto').onclick = () => { const p = vp(); $('#vwBusy').textContent = 'auto…'; fetch('/api/auto/' + p.id).then(r => r.json()).then(a => { ed(p, true).adj = a; cleanEd(p); buildSide(); loadPic(); save(); }); };
 $('#aReset').onclick = () => { const p = vp(), x = ed(p, true); delete x.adj; cleanEd(p); buildSide(); loadPic(); save(); };
@@ -524,6 +584,9 @@ function viewerKey(e) {
   else if (['1','2','3','4','5'].includes(k)) { const p = vp(); SEL.photos[p.path] = +k; buildSide(); save(); }
   else if (k === 'a') $('#aAuto').onclick();
   else if (k === 'c') toggleCrop();
+  else if (k === '+' || k === '=') zoomAt(1.4);
+  else if (k === '-' || k === '_') zoomAt(1 / 1.4);
+  else if (k === '0') resetView();
   else if (k === 'b' && !e.repeat) bef(true);
 }
 document.addEventListener('keyup', e => { if (e.key.toLowerCase() === 'b') bef(false); });
