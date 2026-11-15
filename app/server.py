@@ -41,6 +41,8 @@ def preview_base(it, side=1800):
     im = photofx.load(LIB.abspath(it), side)
     with _clock:
         _cache[key] = im
+        for k in [k for k in _cache if k[1] > 1800][:-4]:  # big previews are ~30 MB each: keep only a few
+            del _cache[k]
         while len(_cache) > 60:
             _cache.popitem(last=False)
     return im
@@ -155,7 +157,7 @@ class H(BaseHTTPRequestHandler):
                 return self.send_json(photofx.auto_adj(preview_base(it)))
             if kind == 'img':  # adjusted preview: /img/<id>?w=1600&exp=..&crop=x,y,w,h
                 side = max(64, min(4000, int(float(q.get('w', 1600)))))
-                im = preview_base(it, 1800 if side > 400 else 400).copy()
+                im = preview_base(it, 400 if side <= 400 else 1800 if side <= 1800 else 3200).copy()
                 if max(im.size) > side:
                     im.thumbnail((side, side))
                 adj = {k: float(q[k]) for k in photofx.KEYS if k in q}
