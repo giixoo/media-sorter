@@ -44,6 +44,7 @@ Everything goes into **`.media-sorter/`** inside the mounted folder (or `STATE_D
 | path | |
 |---|---|
 | `selections.json` | your picks – the useful output |
+| `AGENTS.md` | how an AI agent or script should read the picks (copied on every start) |
 | `index.json` | metadata cache, so restarts and rescans are quick |
 | `thumbs/` | thumbnails |
 | `proxies/` | browser previews (roughly 3–5 MB per minute at 720p) |
@@ -73,6 +74,11 @@ Keys are paths relative to the media folder.
   "saved": "2026-11-15T22:44:41"
 }
 ```
+
+**Using the picks with an AI agent or script:** point it at `.media-sorter/AGENTS.md`
+([app/AGENTS.md](app/AGENTS.md) in this repo). It explains the format, the meaning of stars, time
+ordering, how to apply photo edits, and what not to do while the app is open. Example prompt:
+`Read D:\Videos\Trip\.media-sorter\AGENTS.md and make a 10-minute edit from my selections.`
 
 To apply the same photo fixes in your own pipeline, use `app/photofx.py`
 (`photofx.render(path, edit)` returns the adjusted, cropped Pillow image, matching the preview).
